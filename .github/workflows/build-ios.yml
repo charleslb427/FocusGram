@@ -1,0 +1,49 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+      
+      - name: Install certificates (Apple ID)
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        run: |
+          echo "Logging into Apple ID"
+          xcrun altool --list-providers -u "$APPLE_ID" -p "$APPLE_PASSWORD"
+      
+      - name: Build app
+        run: |
+          xcodebuild \
+            -project ios/IcareLite.xcodeproj \
+            -scheme IcareLite \
+            -configuration Release \
+            -sdk iphoneos \
+            -allowProvisioningUpdates \
+            -archivePath build/IcareLite.xcarchive \
+            archive
+      
+      - name: Export IPA
+        run: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/IcareLite.xcarchive \
+            -exportPath build \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -allowProvisioningUpdates
+      
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: IcareLite-IPA
+          path: build/*.ipa
