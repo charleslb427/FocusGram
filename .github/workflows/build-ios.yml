@@ -1,0 +1,46 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build app (archive)
+        run: |
+          mkdir -p build
+          xcodebuild \
+            -project ios/IcareLite.xcodeproj \
+            -scheme IcareLite \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination generic/platform=iOS \
+            -archivePath build/IcareLite.xcarchive \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM= \
+            -allowProvisioningUpdates \
+            -allowProvisioningDeviceRegistration \
+            archive
+
+      - name: Export IPA
+        run: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/IcareLite.xcarchive \
+            -exportPath build \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -allowProvisioningUpdates
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: IcareLite-IPA
+          path: build/*.ipa
